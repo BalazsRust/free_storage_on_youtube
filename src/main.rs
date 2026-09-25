@@ -5,9 +5,11 @@ use std::{env, path};
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::fs::read_link;
-use qrcode::QrCode;
-use image::Luma;
 use std::sync::atomic::{AtomicU32, Ordering};
+use qrism::{MaskPattern, QRBuilder};
+use qrism::reader::detect_hc_qr;
+
+
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 fn main() -> io::Result<()>{
@@ -324,9 +326,64 @@ pub fn create_qr_code(input:Vec<String>) -> io::Result<()>{
     println!("creating a qr code out of {:#?}",input.clone());
     let data = &input[0];
     // println!("data is {}",data);
-    let code = QrCode::new(format!("{data} |&:{current}|")).unwrap();
-let image = code.render::<Luma<u8>>().build();
+    // let code = QrCode::new(format!("{data} |&:{current}|")).unwrap();
+// let image = code.render::<Luma<u8>>().build();
+let qr_data = format!("{data} |&:{current}|");
+// let qr = QRBuilder::new(qr_data.as_bytes()).build().expect("Error while generating the qr code");
 
-image.save(format!("./images_out/{current}.png")).unwrap(); 
+    let qr = QRBuilder::new(qr_data.as_bytes())
+    .high_capacity(true)
+    .ec_level(qrism::ECLevel::M)
+    .build()
+    .expect("Error while generaitng qr code");
+
+
+
+
+
+
+    let img = qr.to_image(8);
+
+
+
+
+
+    img.save(format!("./images_out/{current}.png")).expect("Error while saving the image");
+// image.save(format!("./images_out/{current}.png")).unwrap(); 
+reading_qr_codes();
+    Ok(())
+}
+
+pub fn reading_qr_codes()-> io::Result<()>{
+    
+    let path = "./images_out";
+    let a = fs::read_dir(path)?;
+    let mut n: Vec<String> = Vec::new();
+    let mut assss = 0;
+    for i in a{
+        // println!("I is {:#?}: ",i?.file_name());
+        assss += 1;
+        // println!("a {}",assss);
+        let aaa: std::ffi::OsString = i?.file_name();
+        let aaa = aaa.to_str().expect("Err");
+        n.push(aaa.to_string());
+    }
+    n.sort();
+    println!("n is {:#?}",n);
+
+    for i in n{
+        println!("i in n is {}:",i);
+        let path = format!("./images_out/{i}");
+
+          let img = image::open(path).expect("Error with img open");
+    // Detect and decode QR codes
+    let mut res = detect_hc_qr(&img);
+    if let Some(symbol) = res.symbols().first_mut() {
+        let (metadata, message) = symbol.decode().expect("failed to read hq qr code");
+        println!("Decoded: {} END", message);
+    }
+    }
+
+  // now the task is to build back the original file form scratch stich them together in a vector  for each remove the |&:0|
     Ok(())
 }
