@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+base64 = "0.23.1"
 image = "0.25.10"
+itertools = "0.15.0"
+lazy_static = "1.5.1"
 qrcode = "0.14.1"
 qrism = "0.1.0"
+z85 = "3.0.7"

@@ -1,172 +1,94 @@
 use std::fs::{self, File};
-use std::io::{self,Read};
+use std::io::{self, Read, Write};
  use std::ops::Add;
-use std::{env, path};
+use std::process::exit;
+use std::{env, path, vec};
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::fs::read_link;
 use std::sync::atomic::{AtomicU32, Ordering};
+use base64::engine::general_purpose::STANDARD_PAD_INDIFFERENT;
+use image::Delay;
+use itertools::Itertools;
 use qrism::{MaskPattern, QRBuilder};
 use qrism::reader::detect_hc_qr;
+use std::sync::Mutex;
+use base64::{Engine, engine::general_purpose::STANDARD};
+use std::process::{Command, Stdio};
+use image::{imageops, Rgb, RgbImage};
+use std::sync::Arc;
+use std::sync::mpsc::sync_channel;
+use std::collections::HashMap;
+use std::thread;
 
-
-
+pub static MY_STRING: Mutex<String> = Mutex::new(String::new());   
 static COUNTER: AtomicU32 = AtomicU32::new(0);
-fn main() -> io::Result<()>{
-   
-fs::remove_dir_all("./images_out")?;
-fs::create_dir_all("./images_out")?;
-    // https://stackoverflow.com/questions/62840979/how-do-i-get-the-filename-of-an-open-stdfsfile-in-rust
+const BYTE_LEN: usize = 3004;
 
-    let paths = fs::read_dir("/home/goseberry/binarycoder/entry")?;
+const WIDTH: u32 = 1920;
+const HEIGHT: u32 = 1080;
+const FPS: u32 = 240;
+const FRAMES_PER_IMAGE: u32 = 1 ; // each image is shown for 1 second
+const SCALE_TO: Option<u32> = Some(1080); // upscale to a 1080x1080 square; None = original size
+
+
+fn main() -> io::Result<()> {
+    // wipe outputs, never wipe inputs
+    fs::remove_dir_all("./images_out").unwrap_or(());
+    fs::remove_dir_all("./FileOut").unwrap_or(());
+    fs::create_dir_all("./entry").unwrap();
+    fs::create_dir_all("./images_out").unwrap();
+    fs::create_dir_all("./FileOut").unwrap();
+    fs::create_dir_all("./Output").unwrap();
+
+
+    let mut input = String::new();
+    println!("To Encode Put a the file you want to encode into entry to get it check Output\n To Decode the video must be ./Output/output.mp4 and check FileOut\nEnter 1 : Encode(Making a video)\nEnter 2: Decoding(Getting Default Data Out)");
+    io::stdin().read_line(&mut input)?;
+    println!("You entered line {}", input);
+    let input = input.trim().parse::<i32>().expect("You Entered Something Wrong");
+
+
+    // decode branch
+    if input == 2 {
+        slice_video("./Output/output.mp4")?;
+        reading_images_from_video()?;
+        return Ok(());
+    }
+
+
+    // encode branch
+    println!("You must put a file inside entry. Press Enter to continue");
+    io::stdin().read_line(&mut String::new())?;
+
+
+    let mut file_path = PathBuf::new();
     let mut file_name = String::new();
-    println!("{:?}",paths);
-    for entry in paths{
-        // println!("path is {:?}",entry?.path());
-        let path: PathBuf = entry?.path();
-        file_name = path.into_os_string().into_string().unwrap();
-
+    for entry in fs::read_dir("./entry")? {
+        let p = entry?.path();
+        file_name = p.file_name().unwrap().to_string_lossy().into_owned();
+        file_path = p;
     }
+    assert!(!file_name.is_empty(), "no file found in ./entry");
+    println!("Encoding file: {}", file_name);
 
-    println!("\n File name is {}",file_name);
-    // to do make so it reads file name only 
-    // println!("file {}",file_name.split_off(file_name.find("entry").unwrap() + "entry".to_owned().len() + 1));
-    // println!("file {}",file_name.split_off(file_name.find("entry").unwrap() + "entry".to_owned().len() + 1));
 
-     // test encode txts only for now;
-    // let mut file_path = "test.asm.txt"; // to do check if it has only one .txt and if it has more then check number of dots in it and check if it has a .txt if there is only one txt and one dot then it is a txt else put another .txt to it 
-    // let mut file = File::open(file_path)?;
-    let file_path1: String =     file_name.split_off(file_name.find("entry").unwrap() + "entry".to_owned().len() + 1);
-    println!("file path1 {}",file_path1);
-    let mut file_path1_clone = file_path1.clone();
-    let file_path2: String = "./entry/".to_owned();
-    let file_path = file_path2 + &file_path1_clone;
-    // let a = check_one(file_path1_clone);
 
-    
-    println!("file path is {}",file_path);
-    let mut file_path = &file_path;
-    match File::open(file_path){
-        Ok(T) =>{
+    making_qr_codes(&file_name, file_path)?;
+    video_maker()?;
 
 
-
-// reading all its contents into a buffer 
-
-
-
-
-
-                let my_string = fs::read_to_string(file_path)?;
-
-                // println!(" file contents are {}",my_string);
-
-
-            let image_folder: String = creating_folder_images()?;
-
-            if is_it_a_modified_txt(&file_path1_clone){
-
-    // println!("new {}",file_path.replace(".txt", ""));
-        //  println!("path is {}",file_path);
-         let test_v = file_path.clone();
-
-    remove_txt_name(&test_v)?;
-            }else{
-
-            
-// reading all its contents into a buffer 
-
-//  get the file format so .asm or .txt
-            // println!("The file format is:{}",); 
-                let file_format = file_path1_clone.split_off(file_path1_clone.find(".").unwrap());
-                println!("\n \n \n File format and it is modified {}",file_path1);
-
-
-                let my_string = fs::read_to_string(file_path)?;
-                let mut my_vec: Vec<String> = Vec::new();
-                my_vec.push(file_path1);
-                my_vec.push(my_string);
-                println!(" file contents are {:?}",my_vec);
-                let mut mystring = String::new();
-                // print!("{:#?}",mystring.join(my_vec.iter()));
-                mystring += &my_vec[0]; 
-                mystring += " | ";
-                mystring += &my_vec[1];
-                println!("\n \n mystring \n {}",mystring);
-                let create_folder: String = creating_folder()?;
-                let output_file_path = creating_a_file(&create_folder, &my_vec[0], mystring)?; // OUTPUT folders created encoded files path
-                println!("Output file path is \n ::{:#?}",output_file_path.clone());
-                //Filename first And Output contents next
-                let read_and_delete_response = reading_output_file_and_deleting_old(output_file_path.clone())?; 
-                std::fs::write(&read_and_delete_response.0, read_and_delete_response.1)?;
-
-                making_qr_codes(read_and_delete_response.0.into())?;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // creating the .txt extension to it 
-// make a functionn out of this 
-    println!("new {}",file_path.to_owned() + ".txt");
-    let new_file_name = file_path.to_owned() + ".txt";
-    fs::rename(file_path, new_file_name)?;
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            }
-
-
-
-
-    
-        }
-        Err(e) =>{
-    println!("new {}",file_path.replace(".txt", ""));
-    let new_file_name = file_path.replace(".txt", "");
-    fs::rename(file_path, new_file_name)?;
-
-        }
-    }
-
-
+    println!("Done check the --> ./Output/output.mp4");
     Ok(())
 }
 
+fn reading_images_from_video() -> io::Result<()>{
+
+    reading_qr_codes();
+
+    // println!("Sex");
+    Ok(())
+}
 
 fn is_it_a_modified_txt(a:&str)-> bool{
     let find_dots = a.split("");
@@ -187,149 +109,46 @@ fn is_it_a_modified_txt(a:&str)-> bool{
     // true
 }
 
-fn creating_folder() -> io::Result<(String)>{
-        let a = std::env::current_dir()?;
 
-    let patth = a.to_str().unwrap().to_owned() + "/Output";
-    let b: () = std::fs::create_dir_all(patth.clone())?;
-    // println!("current dir is {:#?}",a);
-    // println!("path is is {:#?}",patth);
-    Ok(patth)
-}
-
-fn creating_folder_images() -> io::Result<(String)>{
-        let a = std::env::current_dir()?;
-
-    let patth = a.to_str().unwrap().to_owned() + "/images_out";
-    let b: () = std::fs::create_dir_all(patth.clone())?;
-    // println!("current dir is {:#?}",a);
-    // println!("path is is {:#?}",patth);
-    Ok(patth)
-}
-
-fn creating_a_file(path:&str,file_name:&str,contents:String)-> io::Result<PathBuf>{
-    let mut file_namee: String = file_name.to_owned();
-    file_namee += ".txt";
-    let file_path: PathBuf = PathBuf::from(path).join(&file_namee);
-    println!("D:creatigng_a_file path is {:#?}",file_path);
+fn making_qr_codes(file_name_and_format:&str,path:PathBuf) -> io::Result<()>{
     
-    std::fs::write(&file_path, contents)?; // change asd to the contents of the file
-    // writing the contents of it into a file
-    println!("the path we are crating is {:#?}",file_path);
-    Ok(file_path)
-    
-    
-}
+    // let contents = fs::read_to_string(path)?;
+      let bytes = fs::read(&path)?;
+    let contents = STANDARD_PAD_INDIFFERENT.encode(bytes);
+    let chars: Vec<char> = contents.chars().collect();
+    let chunks: Vec<String> = chars.chunks(BYTE_LEN)
+        .map(|c| c.iter().collect())
+        .collect();
 
-fn remove_txt_name(path:&str) -> io::Result<()>{
+    let num_threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
 
-     println!("new {}",path.replace(".txt", ""));
-     println!("path is {}",path);
-    let new_file_name = path.replace(".txt", "");
-    fs::rename(path, new_file_name)?;
-    Ok(())
-}
-// MAKE A FILE INSIDE THE FOLDER IT CREATED using the vec the create folder supplies the output dirr path that it has created 
-// make the original.asm.txt
-
-fn reading_output_file_and_deleting_old(path:PathBuf) -> io::Result<(String,String)>{
-
-            let original_output_path_clone = path.clone();
-                    // we can get the file_name from the output file path and also the file contents we can reconstruct the original file now 
-                let mut output_contents: String = fs::read_to_string(path)?; 
-                println!("Output file contents \n {:#?} ",output_contents.split_at(output_contents.find("|").unwrap() + 2)  );
-                // getting file name out of the file
-                let mut output_splited: (&str, &str) = output_contents.split_at(output_contents.find("|").unwrap() + 2);
-                let mut file_name: &str = output_splited.0;
-                let file_name: String = file_name.replace("|", "").trim_end().to_string();
-                println!("file name is {}",file_name);
-
-                // modifying file contents so it won't have the first part of the txt later adding it into a function
-                let output_contents = output_splited.1;
-                fs::remove_file(original_output_path_clone)?;
-                fs::remove_dir_all("./Output")?;
-                fs::create_dir_all("./Output")?;
-                
-        //Filename first And Output contents next
-    Ok(("./Output/".to_owned() + &file_name,output_contents.to_string()))
-}
-
-fn making_qr_codes(path:PathBuf) -> io::Result<()>{
-    
-    // Devide the len with 128 and the rest which is not even round it up and pack that many bytes 
-    let mut contents = String::new();
-    contents = fs::read_to_string(path)?;
-
-    // println!("CONTENTS OF THE FILE{}",contents);
-    // println!("the len of it is {}:",contents.len());
-
-    let mut contents_cloned = contents.clone();
-    let mut bytes_added:usize = 0;
-    let mut holder : Vec<String> = Vec::new();
-    for i in 1..contents.len() / 128 + 2{
-        // println!("Holder is {:#?}",holder);
-        if bytes_added + 128 > contents.len(){
-            let remaning_bytes = contents.len() - bytes_added;
-            // println!("We got filled up remaning bytes are {}: ",remaning_bytes);
-            // println!("19 remaning {},",&contents.to_string()[bytes_added..(remaning_bytes + bytes_added)]);
-            let a: &str = &contents.to_string()[bytes_added..(remaning_bytes + bytes_added)];
-            let a: String = a.to_string();
-            // println!("a is {}?",a);
-            holder.clear();
-                holder.push(a);
-                create_qr_code(holder.clone())?;
-
-        // break; // MAKE QR CODE OUT OF THIS 
-
-
-        }else{
-            bytes_added += 128;
-            // println!("bytes added is {}",bytes_added);
-            // bytes_added = bytes_added +  128;
-            // println!("i*128 {}",i*128); 
-            if bytes_added == 128{
-                // println!("128 first char of the contents_cloned is {},",&contents.to_string()[0..(i*128)]);
-                // holder.push((&contents.to_string()[0..(i*128)]).to_string());
-                let a = &contents.to_string()[0..(i*128)];
-                let a: String = a.to_string();
-                holder.clear();
-                holder.push(a);
-                create_qr_code(holder.clone())?;
-            }else{
-
-                // holder.push((&contents.to_string()[bytes_added..(i*128)]).to_string());
-                                // holder.clear();
-
-                let a = &contents.to_string()[bytes_added -128 ..(i*128)];
-                let a: String = a.to_string();
-                // println!("asdasdasd aaaaaa is a:{}",a);
-                holder.clear();
-                holder.push(a);
-                create_qr_code(holder.clone())?;
-                // println!("128 first char of the contents_cloned is {},",&contents_cloned.to_string()[bytes_added- 128..(i*128)]);
-
-            }
-// MAKE QR CODE OUT OF THIS
-            
+    std::thread::scope(|s| {
+        for w in 0..num_threads {
+            let chunks = &chunks;
+            s.spawn(move || {
+                let mut i = w;
+                while i < chunks.len() {
+                    create_qr_code(i, file_name_and_format, &chunks[i]).unwrap();
+                    i += num_threads;
+                }
+            });
         }
-    }
-    // get the all size and make it equals to a vrabiée remove 128 from it if we go minus we know we went over so calculate the difrence between the rest which is positiv and make qr codes out of them
-    // todo!()
-
+    });
 
     Ok(())
 }
+pub fn create_qr_code(current:usize,file_name_and_format:&str,data:&str) -> io::Result<()>{
+    println!("creating a qr code out of chunk {}",current);
 
-pub fn create_qr_code(input:Vec<String>) -> io::Result<()>{
-    let current = COUNTER.load(Ordering::Relaxed); // read
-      COUNTER.fetch_add(1, Ordering::Relaxed); // increment
-    println!("creating a qr code out of {:#?}",input.clone());
-    let data = &input[0];
-    // println!("data is {}",data);
-    // let code = QrCode::new(format!("{data} |&:{current}|")).unwrap();
-// let image = code.render::<Luma<u8>>().build();
-let qr_data = format!("{data} |&:{current}|");
-// let qr = QRBuilder::new(qr_data.as_bytes()).build().expect("Error while generating the qr code");
+    let mut qr_data = format!("{data} |&:{current}|");
+    if current == 0{
+        qr_data = format!("{data} |&:{current}|{file_name_and_format}"); // filename only in first chunk
+    }
+
+    let pad_to = BYTE_LEN + file_name_and_format.len() + 32;
+    qr_data = format!("{qr_data:<pad_to$}");
 
     let qr = QRBuilder::new(qr_data.as_bytes())
     .high_capacity(true)
@@ -337,53 +156,250 @@ let qr_data = format!("{data} |&:{current}|");
     .build()
     .expect("Error while generaitng qr code");
 
-
-
-
-
-
     let img = qr.to_image(8);
-
-
-
-
-
     img.save(format!("./images_out/{current}.png")).expect("Error while saving the image");
-// image.save(format!("./images_out/{current}.png")).unwrap(); 
-reading_qr_codes();
     Ok(())
 }
-
 pub fn reading_qr_codes()-> io::Result<()>{
     
     let path = "./images_out";
     let a = fs::read_dir(path)?;
     let mut n: Vec<String> = Vec::new();
-    let mut assss = 0;
     for i in a{
-        // println!("I is {:#?}: ",i?.file_name());
-        assss += 1;
-        // println!("a {}",assss);
         let aaa: std::ffi::OsString = i?.file_name();
         let aaa = aaa.to_str().expect("Err");
         n.push(aaa.to_string());
     }
-    n.sort();
-    println!("n is {:#?}",n);
+    remove_duplicates(&mut n);
+    n.sort_by_key(|s| s.trim_end_matches(".png").parse::<u32>().unwrap_or(0));
 
-    for i in n{
-        println!("i in n is {}:",i);
-        let path = format!("./images_out/{i}");
+    let num_threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(2);
 
-          let img = image::open(path).expect("Error with img open");
-    // Detect and decode QR codes
-    let mut res = detect_hc_qr(&img);
-    if let Some(symbol) = res.symbols().first_mut() {
-        let (metadata, message) = symbol.decode().expect("failed to read hq qr code");
-        println!("Decoded: {} END", message);
+    let mut new_v: Vec<String> = Vec::new();
+    for batch in n.chunks(num_threads) {
+        let mut handles = vec![];
+        for i in batch {
+            let i = i.clone();
+            handles.push(std::thread::spawn(move || {
+                let path = format!("./images_out/{i}");
+                println!("i in n is {}:", i);
+                let img = image::open(path).expect("Error with img open");
+                let mut res = detect_hc_qr(&img);
+                if let Some(symbol) = res.symbols().first_mut() {
+                    symbol.decode().expect("failed to read hq qr code").1
+                } else {
+                    String::new()
+                }
+            }));
+        }
+        for h in handles {
+            let message = h.join().expect("thread panicked");
+            if !message.is_empty() && new_v.last() != Some(&message) {
+                new_v.push(message);
+            }
+        }
     }
+
+    reconsturcting_qr_to_file(new_v);
+    Ok(())
+}
+
+pub fn remove_duplicates(vector:&mut Vec<String>){
+    // Takes a sorted vector as an input
+    vector.dedup();
+    // vector = vector.into_iter().unique();
+
+}
+
+pub fn reconsturcting_qr_to_file(vector:Vec<String>){
+    let mut one_string = String::new();
+
+    // println!("the vec is {:#?}:",vector);
+    
+    let file_name = get_name("|", &vector[0]);
+    for i in vector{
+        let i_len: usize = i.len();
+        // println!("The string normalized {}",normal_string("|", i)); // Fix becaus elen can be more then this 
+        one_string += &normal_string("|", i);
+        // normal_string("|",i);
     }
 
-  // now the task is to build back the original file form scratch stich them together in a vector  for each remove the |&:0|
+    // println!("The file name is kkk {}",file_name);
+    // exit(0);
+    
+    // println!("the one string is {}:",one_string);
+    // it runs multiple times ebcause it is linked to create qr code for now i will change it later on
+    fs::create_dir_all("./FileOut").unwrap();
+    // Delay::from_numer_denom_ms(10, 1);
+    // std::fs::write(format!("./FileOut/{file_name}"),one_string).unwrap(); // need to insert the name of it here
+      let bytes = STANDARD_PAD_INDIFFERENT.decode(one_string.trim_end()).expect("bad base64");
+    std::fs::write(format!("./FileOut/{file_name}"), bytes).unwrap();
+}
+
+pub fn normal_string(_find:&str,input:String) -> String{
+    let idx = input.rfind("|&:").unwrap_or(input.len());
+    input[..idx.saturating_sub(1)].to_string()
+}
+
+pub fn get_name(_find:&str,input:&str) -> String{
+    let idx = input.rfind('|').unwrap_or(0);
+    input[idx + 1..].trim().to_string()
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+fn video_maker() -> io::Result<()>{
+
+
+    fs::remove_dir_all("./Output").unwrap();
+    fs::create_dir_all("./Output").unwrap();
+
+
+    let dir = "./images_out";
+
+
+    let mut paths: Vec<PathBuf> = fs::read_dir(dir)?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().map_or(false, |e| e == "png"))
+        .collect();
+    paths.sort_by_key(|p| {
+        p.file_stem()
+            .and_then(|s| s.to_str())
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(u64::MAX)
+    });
+
+
+    if paths.is_empty() {
+        eprintln!("No PNG files found in {dir}");
+        return Ok(());
+    }
+    println!("Found {} images", paths.len());
+    let paths = Arc::new(paths);
+
+
+    let mut child = Command::new("ffmpeg")
+        .args([
+            "-y",
+            "-f", "rawvideo",
+            "-pix_fmt", "rgb24",
+            "-s", &format!("{WIDTH}x{HEIGHT}"),
+            "-r", &FPS.to_string(),
+            "-i", "-",
+            "-c:v", "libsvtav1",
+            "-crf", "23",
+            "-preset", "8",
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",
+            "./Output/output.mp4",
+        ])
+        .stdin(Stdio::piped())
+        .spawn()?;
+
+
+    let num_threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(3);
+    let (tx, rx) = sync_channel::<(usize, Vec<u8>)>(num_threads * 2);
+
+
+    std::thread::scope(|s| -> io::Result<()> {
+        // workers: decode PNG -> raw frame, send with its index
+        for w in 0..num_threads {
+            let tx = tx.clone();
+            let paths = Arc::clone(&paths);
+            s.spawn(move || {
+                let mut i = w;
+                while i < paths.len() {
+                    let raw = match image::open(&paths[i]) {
+                        Ok(img) => to_canvas(&img.to_rgb8()).into_raw(),
+                        Err(e) => {
+                            eprintln!("Skipping {}: {e}", paths[i].display());
+                            Vec::new()
+                        }
+                    };
+                    if tx.send((i, raw)).is_err() { break; }
+                    i += num_threads;
+                }
+            });
+        }
+        drop(tx); // close channel when all workers finish
+
+
+        // writer: single thread streams raw frames to ffmpeg IN ORDER
+        let mut stdin = child.stdin.take().expect("Failed to open ffmpeg stdin");
+        let mut buf: HashMap<usize, Vec<u8>> = HashMap::new();
+        let mut next = 0usize;
+
+
+        while let Ok((i, raw)) = rx.recv() {
+            buf.insert(i, raw);
+            while let Some(raw) = buf.remove(&next) {
+                if !raw.is_empty() { // failed image was skipped
+                    for _ in 0..FRAMES_PER_IMAGE {
+                        stdin.write_all(&raw)?;
+                    }
+                }
+                next += 1;
+            }
+        }
+        drop(stdin);
+        Ok(())
+    })?;
+
+
+    let status = child.wait()?;
+    println!("FFmpeg finished with: {status}");
+    Ok(())
+}
+fn to_canvas(img: &RgbImage) -> RgbImage {
+    let img = match SCALE_TO {
+        Some(s) => imageops::resize(img, s, s, imageops::FilterType::Nearest),
+        None => img.clone(),
+    };
+    let mut canvas = RgbImage::from_pixel(WIDTH, HEIGHT, Rgb([0, 0, 0]));
+    let x = (WIDTH as i64 - img.width() as i64) / 2;
+    let y = (HEIGHT as i64 - img.height() as i64) / 2;
+    imageops::overlay(&mut canvas, &img, x, y);
+    canvas
+}
+
+
+fn slice_video(video_path: &str) -> io::Result<()> {
+    fs::remove_dir_all("./images_out")?;
+    fs::create_dir_all("./images_out")?;
+
+    let status = Command::new("ffmpeg")
+        .args([
+            "-threads", "0",
+            "-i", video_path,
+            "-filter_threads", "0",   
+            "-vf", &format!("fps={FPS}"),
+            "-compression_level", "1",
+            "./images_out/%d.png",
+        ])
+        .status()?;
+
+
+    if !status.success() {
+        eprintln!("ffmpeg failed with status: {}", status);
+    }
+
+
     Ok(())
 }
