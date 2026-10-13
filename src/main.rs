@@ -20,17 +20,21 @@ use std::sync::Arc;
 use std::sync::mpsc::sync_channel;
 use std::collections::HashMap;
 use std::thread;
+use aes_gcm::{Aes256Gcm, Key, Nonce, aead::{Aead, KeyInit}};
+use argon2::Argon2;
+use rand::RngCore;
 
 pub static MY_STRING: Mutex<String> = Mutex::new(String::new());   
 static COUNTER: AtomicU32 = AtomicU32::new(0);
-const BYTE_LEN: usize = 3004;
+const BYTE_LEN: usize = 5000;
 
 const WIDTH: u32 = 1920;
 const HEIGHT: u32 = 1080;
 const FPS: u32 = 240;
 const FRAMES_PER_IMAGE: u32 = 1 ; // each image is shown for 1 second
 const SCALE_TO: Option<u32> = Some(1080); // upscale to a 1080x1080 square; None = original size
-
+const ENCRYPT: bool = true;
+ const PASSWORD: &str = "123456789";
 
 fn main() -> io::Result<()> {
     // wipe outputs, never wipe inputs
@@ -57,7 +61,7 @@ fn main() -> io::Result<()> {
     }
 
 
-    // encode branch
+     // encode branch
     println!("You must put a file inside entry. Press Enter to continue");
     io::stdin().read_line(&mut String::new())?;
 
@@ -73,13 +77,59 @@ fn main() -> io::Result<()> {
     println!("Encoding file: {}", file_name);
 
 
+    let archive = "./entry.tar.gz";
+    pack_entry(archive)?;
 
-    making_qr_codes(&file_name, file_path)?;
+
+    let mut to_encode = PathBuf::from(archive);
+    if ENCRYPT {
+        let data = fs::read(archive)?;
+        let encrypted = encrypt_bytes(PASSWORD, &data);
+        let enc_path = "./entry.tar.gz.enc";
+        fs::write(enc_path, encrypted)?;
+        to_encode = PathBuf::from(enc_path);
+    }
+    making_qr_codes(&to_encode.clone().file_name().unwrap().to_string_lossy(), to_encode)?;
+
     video_maker()?;
 
 
     println!("Done check the --> ./Output/output.mp4");
     Ok(())
+}
+
+
+
+fn derive_key(password: &str, salt: &[u8]) -> [u8; 32] {
+    let mut key = [0u8; 32];
+    Argon2::default()
+        .hash_password_into(password.as_bytes(), salt, &mut key)
+        .expect("key derivation failed");
+    key
+}
+
+
+fn encrypt_bytes(password: &str, data: &[u8]) -> Vec<u8> {
+    let mut salt = [0u8; 16];
+    rand::thread_rng().fill_bytes(&mut salt);
+    let key = derive_key(password, &salt);
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+    let mut nonce = [0u8; 12];
+    rand::thread_rng().fill_bytes(&mut nonce);
+    let ct = cipher.encrypt(Nonce::from_slice(&nonce), data).expect("encrypt failed");
+    let mut out = salt.to_vec();      
+    out.extend_from_slice(&nonce);    
+    out.extend_from_slice(&ct);       
+    out
+}
+
+fn decrypt_bytes(password: &str, data: &[u8]) -> Vec<u8> {
+    let (salt, rest) = data.split_at(16);
+    let (nonce, ct) = rest.split_at(12);
+    let key = derive_key(password, salt);
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+    cipher.decrypt(Nonce::from_slice(nonce), ct)
+        .expect("wrong password or corrupted data")
 }
 
 fn reading_images_from_video() -> io::Result<()>{
@@ -116,7 +166,7 @@ fn making_qr_codes(file_name_and_format:&str,path:PathBuf) -> io::Result<()>{
       let bytes = fs::read(&path)?;
     let contents = STANDARD_PAD_INDIFFERENT.encode(bytes);
     let chars: Vec<char> = contents.chars().collect();
-    let chunks: Vec<String> = chars.chunks(BYTE_LEN)
+    let chunks: Vec<String> = chars.chunks(BYTE_LEN + 4)
         .map(|c| c.iter().collect())
         .collect();
 
@@ -147,7 +197,7 @@ pub fn create_qr_code(current:usize,file_name_and_format:&str,data:&str) -> io::
         qr_data = format!("{data} |&:{current}|{file_name_and_format}"); // filename only in first chunk
     }
 
-    let pad_to = BYTE_LEN + file_name_and_format.len() + 32;
+    let pad_to = BYTE_LEN + 4 + file_name_and_format.len() + 32;
     qr_data = format!("{qr_data:<pad_to$}");
 
     let qr = QRBuilder::new(qr_data.as_bytes())
@@ -234,8 +284,29 @@ pub fn reconsturcting_qr_to_file(vector:Vec<String>){
     fs::create_dir_all("./FileOut").unwrap();
     // Delay::from_numer_denom_ms(10, 1);
     // std::fs::write(format!("./FileOut/{file_name}"),one_string).unwrap(); // need to insert the name of it here
-      let bytes = STANDARD_PAD_INDIFFERENT.decode(one_string.trim_end()).expect("bad base64");
-    std::fs::write(format!("./FileOut/{file_name}"), bytes).unwrap();
+    //   let bytes = STANDARD_PAD_INDIFFERENT.decode(one_string.trim_end()).expect("bad base64");
+    // // std::fs::write(format!("./FileOut/{file_name}"), bytes).unwrap();
+    //    let out_path = format!("./FileOut/{file_name}");
+    // std::fs::write(&out_path, bytes).unwrap();
+    // if file_name.ends_with(".tar.gz") {
+    //     unpack_archive(&out_path, "./FileOut").unwrap();
+    //     fs::remove_file(&out_path).unwrap(); // 
+    // }
+
+
+
+        let bytes = STANDARD_PAD_INDIFFERENT.decode(one_string.trim_end()).expect("bad base64");
+    let bytes = if file_name.ends_with(".enc") {
+        decrypt_bytes(PASSWORD, &bytes)
+    } else {
+        bytes
+    };
+       let out_path = format!("./FileOut/{}", file_name.trim_end_matches(".enc"));
+    std::fs::write(&out_path, bytes).unwrap();
+    if out_path.ends_with(".tar.gz") {
+        unpack_archive(&out_path, "./FileOut").unwrap();
+        fs::remove_file(&out_path).unwrap();
+    }
 }
 
 pub fn normal_string(_find:&str,input:String) -> String{
@@ -402,4 +473,19 @@ fn slice_video(video_path: &str) -> io::Result<()> {
 
 
     Ok(())
+}
+
+fn pack_entry(archive_path: &str) -> io::Result<()> {
+    let file = File::create(archive_path)?;
+    let enc = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+    let mut tar = tar::Builder::new(enc);
+    tar.append_dir_all(".", "./entry")?;    
+    tar.into_inner()?.finish()?;
+    Ok(())
+}
+
+fn unpack_archive(archive_path: &str, out_dir: &str) -> io::Result<()> {
+    let file = File::open(archive_path)?;
+    let dec = flate2::read::GzDecoder::new(file);
+    tar::Archive::new(dec).unpack(out_dir)
 }

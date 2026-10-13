@@ -1,2 +1,11 @@
 /target
 /images_out
+target/
+Output/
+images_out/
+FileOut/
+entry/
+*.mp4
+*.png
+*.tar.gz
+*.enc
