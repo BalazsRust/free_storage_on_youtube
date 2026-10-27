@@ -16,3 +16,9 @@ flate2 = "1"
 aes-gcm = "0.10"
 argon2 = "0.5"
 rand = "0.8"
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tower-http = { version = "0.5", features = ["cors"] }
+base91 = "0.1"

@@ -1,0 +1,2 @@
+FROM docker.io/nginx
+COPY binarycoder.html /usr/share/nginx/html/index.html
