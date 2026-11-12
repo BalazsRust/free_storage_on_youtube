@@ -40,5 +40,226 @@ Continue?`))return;p(h,!o(h))}function be(w){w==="k4"&&(p(l,4),p(s,30),p(_,Jr,!0
   </head>
   <body>
     <div id="app"></div>
+    <!-- Language switch (EN/HU). The app bundle above is prebuilt, so this translates the rendered DOM. -->
+    <script>
+      (function () {
+        var KEY = "binarycoder-lang";
+        var lang = "en";
+        try { if (localStorage.getItem(KEY) === "hu") lang = "hu"; } catch (e) {}
+
+        // Fixed strings: English -> Hungarian. Keys are whitespace-normalised.
+        var D = {
+          "file > qr-video > file": "fájl > qr-videó > fájl",
+          "Turn any file into a QR video, then turn it back. Pick your settings and hit Encode!":
+            "Alakíts bármilyen fájlt QR-videóvá, majd vissza. Válaszd ki a beállításokat, és nyomj a Kódolásra!",
+          "Encode": "Kódolás",
+          "file to video": "fájlból videó",
+          "drop in files, get an mp4. several files are sent together and packed on the server.":
+            "dobd be a fájlokat, és kapsz egy mp4-et. több fájlt egyszerre küld el, a szerver csomagolja össze.",
+          "drop files here or click": "húzd ide a fájlokat, vagy kattints",
+          "presets": "sablonok",
+          "Default": "Alap",
+          "Frame rate": "Képkockasebesség",
+          "Resolution": "Felbontás",
+          "Frames per image": "Képkocka / kép",
+          "4K frames are ~25 MB each. Use a low fps (30 is the default here).":
+            "A 4K képkockák egyenként ~25 MB-osak. Használj alacsony fps-t (itt 30 az alapérték).",
+          "fps above 120 at 4K needs a lot of RAM.": "4K-ban 120 fps fölött nagyon sok RAM kell.",
+          "Encrypt with AES-256": "Titkosítás AES-256-tal",
+          "Password (required)": "Jelszó (kötelező)",
+          "Advanced settings": "Haladó beállítások",
+          "Hide advanced settings": "Haladó beállítások elrejtése",
+          "Working...": "Dolgozom...",
+          "Uploading": "Feltöltés",
+          "Almost done...": "Mindjárt kész...",
+          "Done": "Kész",
+          "Failed": "Sikertelen",
+          "Download video": "Videó letöltése",
+          "⚠ Your PC might crash if you don't have enough RAM. 16 GB RAM is the minimum to make sure it runs smoothly. An i5 or Ryzen 5 processor is required to be perfectly smooth.":
+            "⚠ A géped lefagyhat, ha nincs elég RAM. Legalább 16 GB RAM kell ahhoz, hogy biztosan simán fusson. A teljesen akadásmentes működéshez i5 vagy Ryzen 5 processzor szükséges.",
+          "PC profile": "PC-profil",
+          "Error correction": "Hibajavítás",
+          "Normal (60 fps max)": "Normál (max. 60 fps)",
+          "Medium PC (120 fps, 6100 B)": "Közepes PC (120 fps, 6100 B)",
+          "Advanced PC (240 fps, 6250 B)": "Erős PC (240 fps, 6250 B)",
+          "Own risk (1000 fps, 6500 B)": "Saját felelősségre (1000 fps, 6500 B)",
+          "4K - 6 codes/frame": "4K - 6 kód/képkocka",
+          "Own risk mode: very high load. Crashes, freezes and out-of-memory errors are possible. You use it at your own risk.":
+            "Saját felelősségű mód: nagyon nagy terhelés. Összeomlás, lefagyás és memóriahiány is előfordulhat. Saját felelősségedre használod.",
+          "CRF above 28 usually breaks decoding below 4K (tested: 1080p decodes at 28, not at 32).":
+            "28 fölötti CRF-nél 4K alatt általában nem működik a dekódolás (tesztelve: 1080p 28-nál dekódolható, 32-nél nem).",
+          "At 4K, CRF values above 32 are not supported (tested: 32 decodes, 36 does not).":
+            "4K-ban a 32 fölötti CRF nem támogatott (tesztelve: 32 dekódolható, 36 nem).",
+          "QR tile size (must match when decoding)": "QR-csempe mérete (dekódoláskor egyeznie kell)",
+          "I understand the risk": "Értem a kockázatot",
+          "Click to type a value": "Kattints az érték beírásához",
+          "Decode": "Dekódolás",
+          "video to file": "videóból fájl",
+          "put the mp4 back in, original files come out.": "tedd vissza az mp4-et, és megkapod az eredeti fájlokat.",
+          "drop the mp4 here or click": "húzd ide az mp4-et, vagy kattints",
+          "Video frame rate (info only)": "Videó képkockasebessége (csak tájékoztató)",
+          "QR tile size (same as encoding)": "QR-csempe mérete (ugyanaz, mint kódoláskor)",
+          "Password (if encrypted)": "Jelszó (ha titkosított)",
+          "Download recovered files": "Visszaállított fájlok letöltése",
+          "Specs": "Adatok",
+          "Chunk size": "Darabméret",
+          "Encryption": "Titkosítás",
+          "Output": "Kimenet",
+          "64-6500 bytes per QR": "64-6500 bájt QR-kódonként",
+          "AES-256, optional": "AES-256, választható",
+          "ready - start the server with menu option 3": "kész - indítsd el a szervert a menü 3-as pontjával",
+          "ready - the QR tile size must be the same as the one used for encoding":
+            "kész - a QR-csempe méretének egyeznie kell a kódoláskor használttal",
+          "A job is already running. Wait for it to finish.": "Már fut egy feladat. Várd meg, amíg befejeződik.",
+          "Choose at least one file before encoding.": "Kódolás előtt válassz ki legalább egy fájlt.",
+          "Choose an MP4 before decoding.": "Dekódolás előtt válassz ki egy MP4-et.",
+          "Invalid error correction level.": "Érvénytelen hibajavítási szint.",
+          "Invalid resolution.": "Érvénytelen felbontás.",
+          "Tick \"I understand the risk\" first.": "Előbb pipáld be: „Értem a kockázatot”.",
+          "Password is required when encryption is on.": "Bekapcsolt titkosításnál kötelező a jelszó.",
+          "Own risk mode can freeze or crash your PC. Continue?":
+            "A saját felelősségű mód lefagyaszthatja vagy összeomlaszthatja a gépedet. Folytatod?",
+          "Your PC might crash if you do not have enough RAM. 16 GB RAM is the minimum to make sure it runs smoothly. An i5 or Ryzen 5 processor is required to be perfectly smooth. Continue?":
+            "A géped lefagyhat, ha nincs elég RAM.\n\nLegalább 16 GB RAM kell ahhoz, hogy biztosan simán fusson.\nA teljesen akadásmentes működéshez i5 vagy Ryzen 5 processzor szükséges.\n\nFolytatod?"
+        };
+
+        // Strings with numbers / names in them.
+        var P = [
+          [/^Chunk size \(max (\d+)\)$/, function (m) { return "Darabméret (max. " + m[1] + ")"; }],
+          [/^QR codes per frame: (.*)$/, function (m) { return "QR-kód képkockánként: " + m[1]; }],
+          [/^estimate: ~(\S*) QR codes, ~(\S*) frames, ~(\S*) s video \(upper estimate, ignores compression\)$/, function (m) {
+            return "becslés: ~" + m[1] + " QR-kód, ~" + m[2] + " képkocka, ~" + m[3] + " mp videó (felső becslés, tömörítés nélkül számolva)";
+          }],
+          [/^Uploading (.+)$/, function (m) { return "Feltöltés " + m[1]; }],
+          [/^(L|M|Q|H) - recovers (~\d+%)$/, function (m) { return m[1] + " - " + m[2] + " helyreállítás"; }],
+          [/^encoding (\d+) file\(s\), (.+)$/, function (m) { return m[1] + " fájl kódolása, " + m[2]; }],
+          [/^(\d+ B\/QR, \d+ fps, \d+x\d+), tile (\d+), ec (\d+), crf (\d+)(, encrypted)?$/, function (m) {
+            return m[1] + ", csempe " + m[2] + ", hibajav. " + m[3] + ", crf " + m[4] + (m[5] ? ", titkosítva" : "");
+          }],
+          [/^(.+) - decode with QR tile size (\d+)$/, function (m) { return m[1] + " - dekódolás " + m[2] + "-es QR-csempemérettel"; }],
+          [/^decoding (.+), tile (\d+)$/, function (m) { return "dekódolás: " + m[1] + ", csempe " + m[2]; }],
+          [/^CRF must be (\d+-\d+)\.$/, function (m) { return "A CRF értéke " + m[1] + " között lehet."; }],
+          [/^QR tile size must be (\d+-\d+)\.$/, function (m) { return "A QR-csempe mérete " + m[1] + " között lehet."; }],
+          [/^Chunk size must be (\d+-\d+)\.$/, function (m) { return "A darabméret " + m[1] + " között lehet."; }],
+          [/^Frame rate must be (\d+-\d+)( fps)?\.$/, function (m) { return "A képkockasebesség " + m[1] + (m[2] || "") + " között lehet."; }],
+          [/^Frames per image must be (\d+-\d+)\.$/, function (m) { return "A képkocka / kép értéke " + m[1] + " között lehet."; }],
+          [/^Cannot reach the server at (.+)$/, function (m) { return "A szerver nem érhető el: " + m[1]; }],
+          [/^(.+) value$/, function (m) { return core(m[1]) + " értéke"; }]
+        ];
+
+        function core(key) {
+          if (Object.prototype.hasOwnProperty.call(D, key)) return D[key];
+          for (var i = 0; i < P.length; i++) {
+            var m = P[i][0].exec(key);
+            if (m) return P[i][1](m);
+          }
+          return key;
+        }
+
+        function tr(s) {
+          var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(s);
+          if (!m[2]) return s;
+          var key = m[2].replace(/\s+/g, " ");
+          var out = core(key);
+          return out === key ? s : m[1] + out + m[3];
+        }
+
+        // The file list under the drop zone holds file names; only its summary lines are translated.
+        function trNames(s) {
+          return s
+            .replace(/^\+(\d+) more$/m, "+ még $1")
+            .replace(/^(\d+) files (\(.*\))$/m, "$1 fájl $2");
+        }
+
+        var ATTRS = ["placeholder", "title", "aria-label"];
+        var seenText = new WeakMap(); // text node -> { src, out }
+        var seenAttr = new WeakMap(); // element  -> { attr: { src, out } }
+
+        function render(src, node) {
+          if (lang !== "hu") return src;
+          var p = node && node.parentNode;
+          if (p && p.classList && p.classList.contains("fname")) return trNames(src);
+          return tr(src);
+        }
+
+        function doText(node) {
+          var cur = node.nodeValue;
+          var rec = seenText.get(node);
+          var src = rec && rec.out === cur ? rec.src : cur; // otherwise the app wrote a new value
+          var out = render(src, node);
+          seenText.set(node, { src: src, out: out });
+          if (out !== cur) node.nodeValue = out;
+        }
+
+        function doAttrs(el) {
+          var recs = seenAttr.get(el);
+          for (var i = 0; i < ATTRS.length; i++) {
+            var a = ATTRS[i];
+            if (!el.hasAttribute(a)) continue;
+            var cur = el.getAttribute(a);
+            if (!recs) seenAttr.set(el, (recs = {}));
+            var rec = recs[a];
+            var src = rec && rec.out === cur ? rec.src : cur;
+            var out = lang === "hu" ? tr(src) : src;
+            recs[a] = { src: src, out: out };
+            if (out !== cur) el.setAttribute(a, out);
+          }
+        }
+
+        function skip(el) {
+          var t = el.nodeName;
+          return t === "SCRIPT" || t === "STYLE" || t === "svg" || t === "TEXTAREA";
+        }
+
+        function walk(node) {
+          if (node.nodeType === 3) return doText(node);
+          if (node.nodeType !== 1 || skip(node)) return;
+          doAttrs(node);
+          for (var c = node.firstChild; c; c = c.nextSibling) walk(c);
+        }
+
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "nes-btn lang-switch";
+        btn.style.cssText = "margin:0;padding:4px 10px;font-size:.8em";
+        function paintBtn() {
+          btn.textContent = lang === "hu" ? "English" : "Magyar";
+          btn.title = lang === "hu" ? "Switch to English" : "Váltás magyarra";
+          document.documentElement.lang = lang;
+        }
+        btn.addEventListener("click", function () {
+          lang = lang === "hu" ? "en" : "hu";
+          try { localStorage.setItem(KEY, lang); } catch (e) {}
+          paintBtn();
+          walk(root);
+        });
+        paintBtn();
+
+        function placeBtn() {
+          if (btn.isConnected) return;
+          var nav = root.querySelector("nav");
+          if (nav) nav.appendChild(btn);
+        }
+
+        var root = document.getElementById("app");
+        new MutationObserver(function (list) {
+          for (var i = 0; i < list.length; i++) {
+            var m = list[i];
+            if (m.type === "characterData") doText(m.target);
+            else if (m.type === "attributes") doAttrs(m.target);
+            else for (var j = 0; j < m.addedNodes.length; j++) if (m.addedNodes[j] !== btn) walk(m.addedNodes[j]);
+          }
+          placeBtn();
+        }).observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+
+        var nativeConfirm = window.confirm;
+        window.confirm = function (msg) {
+          return nativeConfirm.call(window, lang === "hu" ? tr(String(msg)) : msg);
+        };
+
+        walk(root);
+        placeBtn();
+      })();
+    </script>
   </body>
 </html>
