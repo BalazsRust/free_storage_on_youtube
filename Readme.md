@@ -71,10 +71,7 @@ Fontos: ha megadsz `config` mezőt, add meg benne az összes értéket. A kihagy
 ## Ismert hiányosságok
 
 - A fájlnév titkosítatlanul kerül az első darabba.
-- Hibás jelszónál a program hibaüzenet helyett leáll.
 - A titkosítatlan módnak nincs saját sértetlenség-ellenőrzése.
-- Parancssori mód jelenleg nincs bekötve, a `main` az API-t indítja.
-- Nem teszteltem, hogyan viselkedik a videó, ha egy videómegosztó platform újratömöríti.
 
 Az eszköz oktatási és kutatási célú. Videómegosztó platformon csak a platform felhasználási feltételeinek betartásával használd.
 
